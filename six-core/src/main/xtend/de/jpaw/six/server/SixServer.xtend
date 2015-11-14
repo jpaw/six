@@ -91,7 +91,27 @@ public class SimpleBodyHandler implements Handler<RoutingContext> {
 public class SixServer extends AbstractVerticle {
     private static final Logger LOGGER = LoggerFactory.getLogger(SixServer)
     private static final String EVENTBUS_ADDRESS = "draw";
-    private static int port = 8080
+    private int port = 8086     // default
+    
+    def public void setPort(int port) {
+        this.port = port
+    }
+    
+    // autodetect the port assigned on AWS
+    def public void portAutoDetect() {
+        try {
+            val portStr = System.getenv("PORT")
+            if (portStr !== null) {
+                println('''Found environment spec for PORT: «portStr», assuming we run on AWS Elastic Beanstalk''')
+                port = Integer.parseInt(portStr)
+            } else {
+                println('''No PORT environment setting found, assuming we run locally''')
+            }
+        } catch (Exception e) {
+            println('''Exception «e.message»''')
+        }
+        LOGGER.info('''listening on port «port»...''')
+    }
     
     // have a per-instance (thread) prealloacted map of composers
     @Inject IAuthHandlerFactory authHandlerFactory
@@ -160,19 +180,7 @@ public class SixServer extends AbstractVerticle {
     def static void main(String[] args) throws Exception {
         LOGGER.info('''Six server starting...''')
         initializeJdp
-        try {
-            val portStr = System.getenv("PORT")
-            if (portStr !== null) {
-                println('''Found environment spec for PORT: «portStr», assuming we run on AWS Elastic Beanstalk''')
-                port = Integer.parseInt(portStr)
-            } else {
-                println('''No PORT environment setting found, assuming we run locally''')
-            }
-        } catch (Exception e) {
-            println('''Exception «e.message», JPA probably not working''')
-        }
-        Vertx.vertx.deployVerticle(new SixServer)
-        LOGGER.info('''listening on port «port»...''')
+        Vertx.vertx.deployVerticle(new SixServer => [ portAutoDetect ])
 
         new Thread([Thread.sleep(100000)]).start // wait in some other thread
     }
