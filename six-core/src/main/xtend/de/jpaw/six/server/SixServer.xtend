@@ -12,8 +12,11 @@ import de.jpaw.xenums.init.ExceptionInitializer
 import de.jpaw.xenums.init.ReflectionsPackageCache
 import de.jpaw.xenums.init.XenumInitializer
 import io.vertx.core.AbstractVerticle
+import io.vertx.core.Handler
 import io.vertx.core.Vertx
+import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.Router
+import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.ext.web.handler.sockjs.BridgeOptions
@@ -27,6 +30,63 @@ import org.slf4j.LoggerFactory
 @Dependent
 public class SixMessageCoderFactory<O extends BonaPortable> extends SingleThreadCachingMessageCoderFactory<BonaPortable> {
 }
+
+public class SimpleBodyHandler implements Handler<RoutingContext> {
+    val long bodyLimit
+    
+    public new (Long limit) {
+        this.bodyLimit = limit
+    }
+    public new () {
+        this.bodyLimit = -1L
+    }
+    
+    override handle(RoutingContext context) {
+        context.request => [
+            val handler = new BHandler(context, bodyLimit);
+            handler(handler);
+            endHandler [ handler.end ]
+        ]
+    }
+    
+    private static class BHandler implements Handler<Buffer> {
+
+        val long bodyLimit
+        val RoutingContext context;
+        val Buffer body = Buffer.buffer();
+        var boolean failed;
+        var boolean ended;
+
+        private new(RoutingContext it, long limit) {
+            this.context = it
+            this.bodyLimit = limit
+            // request.expectMultipart = false
+            request.exceptionHandler [ context.fail(it) ];
+        }
+        
+        override handle(Buffer buff) {
+            if (failed) {
+                return;
+            }
+            if (bodyLimit != -1 && (body.length() + buff.length()) > bodyLimit) {
+                failed = true;
+                context.fail(413);
+            } else {
+                body.appendBuffer(buff);
+            }
+        }
+
+        def void end() {
+            if (failed || ended) {
+                return;
+            }
+            ended = true;
+            context.setBody(body);
+            context.next();
+        }
+    }
+}
+
 
 public class SixServer extends AbstractVerticle {
     private static final Logger LOGGER = LoggerFactory.getLogger(SixServer)
@@ -50,8 +110,9 @@ public class SixServer extends AbstractVerticle {
             .addInboundPermitted(new PermittedOptions().setAddress(EVENTBUS_ADDRESS))
             
         val router = Router.router(vertx) => [
+            route("/api/*").handler(BodyHandler.create)     // must be before any possible execBlocking, see https://github.com/vert-x3/vertx-web/issues/198
             route("/api/*").handler(authHandler);
-            route("/api/*").handler(BodyHandler.create)
+            // post("/api/*").handler(new SimpleBodyHandler(8_000_000L))  // BodyHandler.create)
             
             // register the web paths of the injected modules
             for (m : modules) {

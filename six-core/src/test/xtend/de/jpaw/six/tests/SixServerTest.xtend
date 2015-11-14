@@ -2,13 +2,16 @@ package de.jpaw.six.tests
 
 import de.jpaw.six.server.SixServer
 import io.vertx.core.Vertx
-import io.vertx.core.http.HttpHeaders
+import static io.vertx.core.http.HttpHeaders.*
 import io.vertx.ext.unit.TestContext
 import io.vertx.ext.unit.junit.VertxUnitRunner
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.nio.charset.StandardCharsets
+import java.util.Base64
+import de.jpaw.six.demo.DummyAuthenticationBackend
 
 @RunWith(VertxUnitRunner)
 public class JwtRemoteTest {
@@ -34,14 +37,89 @@ public class JwtRemoteTest {
 
         vertx.createHttpClient => [
             getNow(8080, "localhost", "/auth/login", [
-                handler [
-                    println('''Result: token = «it»''')
+                if (statusCode != 200) {
+                    println('''Result: error code «statusCode», msg «statusMessage»''')
                     async.complete
-                ]
+                } else {
+                    handler [
+                        println('''Result: token = «it»''')
+                        async.complete
+                    ]
+                }
             ])  
         ]
     }
     
+    @Test
+    def public void testSixServerBasicAuth(TestContext context) {
+        val async = context.async
+        
+        val authHdr = Base64.urlEncoder.encode("john:secret".getBytes(StandardCharsets.UTF_8))
+
+        vertx.createHttpClient => [
+            get(8080, "localhost", "/api/demo/hello", [
+                if (statusCode != 200) {
+                    println('''Result: error code «statusCode», msg «statusMessage»''')
+                    async.complete
+                } else {
+                    handler [
+                        println('''Result: token = «it»''')
+                        async.complete
+                    ]
+                }
+            ])
+            .putHeader(AUTHORIZATION, "Basic " + new String(authHdr, StandardCharsets.UTF_8))
+            .end
+        ]
+    }
+
+    @Test
+    def public void testSixServerBasicAuthRpc(TestContext context) {
+        val async = context.async
+        
+        val authHdr = Base64.urlEncoder.encode("john:secret".getBytes(StandardCharsets.UTF_8))
+
+        vertx.createHttpClient => [
+            post(8080, "localhost", "/api/rpc", [
+                if (statusCode != 200) {
+                    println('''Result: error code «statusCode», msg «statusMessage»''')
+                    async.complete
+                } else {
+                    handler [
+                        println('''Result: token = «it»''')
+                        async.complete
+                    ]
+                }
+            ])
+            .putHeader(AUTHORIZATION, "Basic " + new String(authHdr, StandardCharsets.UTF_8))
+            .putHeader(CONTENT_TYPE, "application/json")
+            .end('''{  "foo": "bar", "decision": true, "list": [ 1, 2, 3, 4, 3.14 ] }''')
+        ]
+    }
+
+    @Test
+    def public void testSixServerApiKey(TestContext context) {
+        val async = context.async
+        
+        val authHdr = DummyAuthenticationBackend.DEMO_API_KEY
+
+        vertx.createHttpClient => [
+            get(8080, "localhost", "/api/demo/hello", [
+                if (statusCode != 200) {
+                    println('''Result: error code «statusCode», msg «statusMessage»''')
+                    async.complete
+                } else {
+                    handler [
+                        println('''Result: token = «it»''')
+                        async.complete
+                    ]
+                }
+            ])
+            .putHeader(AUTHORIZATION, "API-Key " + authHdr)
+            .end
+        ]
+    }
+
     @Test
     def public void testSixServerNoAuth(TestContext context) {
         val async = context.async
@@ -76,7 +154,7 @@ public class JwtRemoteTest {
                 else
                     async.complete
             ])
-            .putHeader(HttpHeaders.AUTHORIZATION, "ghghghgh.ggg.ggg")
+            .putHeader(AUTHORIZATION, "ghghghgh.ggg.ggg")
             .end  
         ]
     }
@@ -96,7 +174,7 @@ public class JwtRemoteTest {
                 else
                     async.complete
             ])
-            .putHeader(HttpHeaders.AUTHORIZATION, "Bearer ghghghgh.ggg.ggg")
+            .putHeader(AUTHORIZATION, "Bearer ghghghgh.ggg.ggg")
             .end  
         ]
     }
@@ -119,8 +197,8 @@ public class JwtRemoteTest {
                     else
                         async.complete
                 ])
-                .putHeader(HttpHeaders.AUTHORIZATION, "Bearer " + jwt)
-                .putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+                .putHeader(AUTHORIZATION, "Bearer " + jwt)
+                .putHeader(CONTENT_TYPE, "application/json")
                 .end('''{
                     "foo": "bar"
                 }

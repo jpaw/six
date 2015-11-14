@@ -1,9 +1,15 @@
 package de.jpaw.six.demo
 
+import de.jpaw.bonaparte.core.BonaPortable
 import de.jpaw.bonaparte.core.BonaparteJsonEscaper
+import de.jpaw.bonaparte.core.StaticMeta
 import de.jpaw.dp.Dependent
+import de.jpaw.dp.Fallback
 import de.jpaw.dp.Named
+import de.jpaw.dp.Singleton
+import de.jpaw.six.IRequestProcessor
 import de.jpaw.six.IServiceModule
+import de.jpaw.util.ApplicationException
 import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
 import java.util.Currency
@@ -17,8 +23,8 @@ import static io.vertx.core.http.HttpHeaders.*
  */
  @Named("demo")
  @Dependent
-class DemoModule implements IServiceModule {
-    private static final Logger LOGGER = LoggerFactory.getLogger(DemoModule)
+class SixDemoModule implements IServiceModule {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SixDemoModule)
     
     override getExceptionOffset() {
         return 230000
@@ -42,5 +48,28 @@ class DemoModule implements IServiceModule {
                 response.putHeader("content-type", "application/json").end(BonaparteJsonEscaper.asJson(Currency.availableCurrencies.map[currencyCode].toList))
             ]
         ]
+    }
+}
+
+@Fallback
+@Singleton
+class SixDemoProcessor implements IRequestProcessor<BonaPortable, BonaPortable> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SixDemoProcessor)
+    
+    override execute(BonaPortable rq) throws ApplicationException {
+        LOGGER.info('''Processing request «rq»''')
+        return rq
+    }
+    
+    override getRequestRef() {
+        return StaticMeta.OUTER_BONAPORTABLE
+    }
+    
+    override getResponseRef() {
+        return StaticMeta.OUTER_BONAPORTABLE
+    }
+    
+    override getReturnCode(BonaPortable rs) {
+        return 0
     }
 }

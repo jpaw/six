@@ -8,6 +8,7 @@ import de.jpaw.bonaparte8.vertx3.IMessageCoderFactory
 import de.jpaw.dp.Dependent
 import de.jpaw.dp.Inject
 import de.jpaw.dp.Named
+import de.jpaw.six.IRequestProcessor
 import de.jpaw.six.IServiceModule
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
@@ -22,10 +23,11 @@ import static io.vertx.core.http.HttpHeaders.*
  */
  @Named("rpc")
  @Dependent
-class RpcModule implements IServiceModule {
+class RpcModule<RQ extends BonaPortable, RS extends BonaPortable> implements IServiceModule {
     private static final Logger LOGGER = LoggerFactory.getLogger(SixServer)
     
     @Inject private IMessageCoderFactory<BonaPortable, byte[]> coderFactory
+    @Inject private IRequestProcessor<RQ, RS> requestProcessor;
     
     override getExceptionOffset() {
         return 10_000
@@ -44,45 +46,41 @@ class RpcModule implements IServiceModule {
         
                 val info = user?.principal?.map?.get("info")
                 if (info === null || !(info instanceof JwtInfo)) {
-                    throw new RuntimeException("No user defined or of bad type: Missing auth handler?") 
+                    LOGGER.error("No user defined or of bad type: Missing auth handler for rpc?")
+                    error(500, "No user defined or of bad type: Missing auth handler?")
+                    return
                 }
-                val info2 = info as JwtInfo
+                val jwtInfo = info as JwtInfo
                 val ct = request.headers.get(CONTENT_TYPE)
                 if (ct === null) {
-                    response.statusMessage = '''Undefined Content-Type'''
-                    error = 415
+                    error(415, "Content-Type not specified")
                     return
                 }
                 // decode the payload
                 val decoder = coderFactory.getDecoderInstance(ct)
                 val encoder = coderFactory.getEncoderInstance(ct)
                 if (decoder === null || encoder === null) {
-                    response.statusMessage = '''Content-Type «ct» not supported for path /rpc'''
-                    error = 415
+                    error(415, '''Content-Type «ct» not supported for path /rpc''')
                     return
                 }
-                vertx.executeBlocking([], [])
-                var BonaPortable request
-                try {
-                    request = decoder.decode(body.bytes, StaticMeta.OUTER_BONAPORTABLE)
-                } catch (MessageParserException e) {
-                    error = 400
-                    response.statusMessage = e.message
-                    return
-                }
-                // process the request
-                
-                // send the response
-                // ECHO for now
-                if (false) {
-                    error(500, '''error msg of the response''')
-                    return
-                }
-                val end = System.currentTimeMillis
-                val resp = encoder.encode(request, StaticMeta.OUTER_BONAPORTABLE)
-                LOGGER.info("Processed request {} for tenant {} in {} ms with result code 0, response length is {}", request.ret$PQON, info2.tenantId, end - start, resp.length)
-                response.end(Buffer.buffer(resp))
-                
+                val ctx = it
+                vertx.<Void>executeBlocking([
+                    try {
+                        val request  = decoder.decode(ctx.body.bytes, requestProcessor.requestRef)
+                        val response = requestProcessor.execute(request as RQ)
+                        val respMsg  = encoder.encode(response, requestProcessor.responseRef)
+                        val end = System.currentTimeMillis
+                        LOGGER.info("Processed request {} for tenant {} in {} ms with result code {}, response length is {}",
+                            request.ret$PQON, jwtInfo.tenantId, end - start, requestProcessor.getReturnCode(response), respMsg.length
+                        )
+                        ctx.response.end(Buffer.buffer(respMsg))
+                    } catch (MessageParserException e) {
+                        ctx.error(400, e.message)
+                    } catch (Exception e) {
+                        ctx.error(500, e.message)
+                    }
+                    complete()
+                ], [])
             ]
         ]
     }

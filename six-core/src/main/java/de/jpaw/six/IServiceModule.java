@@ -1,5 +1,6 @@
 package de.jpaw.six;
 
+import de.jpaw.util.CharTestsASCII;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.Router;
@@ -24,6 +25,15 @@ public interface IServiceModule extends Comparable<IServiceModule> {
         return num != 0 ? num : getModuleName().compareTo(that.getModuleName());
     }
     
+    static String asciiSubString(String s, int maxLength) {
+        int max = s.length() < maxLength ? s.length() : maxLength;
+        for (int i = 0; i < max; ++i) {
+            if (!CharTestsASCII.isAsciiPrintable(s.charAt(i)))
+                return s.substring(0, i);
+        }
+        return s;   // whole string is printable ASCII
+    }
+    
     static void error(RoutingContext ctx, int errorCode) {
         HttpServerResponse r = ctx.response();
         r.setStatusCode(errorCode);
@@ -33,7 +43,7 @@ public interface IServiceModule extends Comparable<IServiceModule> {
     static void error(RoutingContext ctx, int errorCode, String msg) {
         HttpServerResponse r = ctx.response();
         r.setStatusCode(errorCode);
-        r.setStatusMessage(msg);
+        r.setStatusMessage(asciiSubString(msg, 200));
         r.end();
     }
 }
