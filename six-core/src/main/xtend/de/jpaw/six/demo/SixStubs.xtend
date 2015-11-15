@@ -1,9 +1,9 @@
 package de.jpaw.six.demo
 
+import de.jpaw.bonaparte.api.auth.IAuthenticationBackend
 import de.jpaw.bonaparte.pojos.api.auth.JwtInfo
 import de.jpaw.dp.Fallback
 import de.jpaw.dp.Singleton
-import de.jpaw.six.IAuthenticationBackend
 import de.jpaw.util.ApplicationException
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong

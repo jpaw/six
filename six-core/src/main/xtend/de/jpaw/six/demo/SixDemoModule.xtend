@@ -1,5 +1,6 @@
 package de.jpaw.six.demo
 
+import de.jpaw.bonaparte.api.auth.IRequestProcessor
 import de.jpaw.bonaparte.core.BonaPortable
 import de.jpaw.bonaparte.core.BonaparteJsonEscaper
 import de.jpaw.bonaparte.core.StaticMeta
@@ -8,7 +9,6 @@ import de.jpaw.dp.Dependent
 import de.jpaw.dp.Fallback
 import de.jpaw.dp.Named
 import de.jpaw.dp.Singleton
-import de.jpaw.six.IRequestProcessor
 import de.jpaw.six.IServiceModule
 import io.vertx.core.Vertx
 import io.vertx.ext.web.Router

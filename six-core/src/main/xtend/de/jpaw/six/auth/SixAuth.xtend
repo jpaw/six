@@ -1,12 +1,12 @@
 package de.jpaw.six.auth
 
+import de.jpaw.bonaparte.api.auth.IAuthenticationBackend
 import de.jpaw.bonaparte.pojos.api.auth.JwtInfo
 import de.jpaw.bonaparte8.vertx3.auth.BonaparteJwtAuthHandlerImpl
 import de.jpaw.bonaparte8.vertx3.auth.BonaparteVertxUser
 import de.jpaw.dp.Dependent
 import de.jpaw.dp.Inject
 import de.jpaw.dp.Singleton
-import de.jpaw.six.IAuthenticationBackend
 import de.jpaw.six.IServiceModule
 import io.vertx.core.AsyncResultHandler
 import io.vertx.core.Handler

@@ -1,14 +1,13 @@
 package de.jpaw.six.server
 
+import de.jpaw.bonaparte.api.auth.IRequestProcessor
 import de.jpaw.bonaparte.core.BonaPortable
 import de.jpaw.bonaparte.core.MessageParserException
-import de.jpaw.bonaparte.core.StaticMeta
 import de.jpaw.bonaparte.pojos.api.auth.JwtInfo
 import de.jpaw.bonaparte8.vertx3.IMessageCoderFactory
 import de.jpaw.dp.Dependent
 import de.jpaw.dp.Inject
 import de.jpaw.dp.Named
-import de.jpaw.six.IRequestProcessor
 import de.jpaw.six.IServiceModule
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
