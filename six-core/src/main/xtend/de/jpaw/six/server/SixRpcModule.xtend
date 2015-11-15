@@ -51,6 +51,7 @@ class RpcModule<RQ extends BonaPortable, RS extends BonaPortable> implements ISe
                     return
                 }
                 val jwtInfo = info as JwtInfo
+                val encodedJwt = user?.principal?.map?.get("jwt")
                 val ct = request.headers.get(CONTENT_TYPE)
                 if (ct === null) {
                     error(415, "Content-Type not specified")
@@ -67,7 +68,7 @@ class RpcModule<RQ extends BonaPortable, RS extends BonaPortable> implements ISe
                 vertx.<Void>executeBlocking([
                     try {
                         val request  = decoder.decode(ctx.body.bytes, requestProcessor.requestRef)
-                        val response = requestProcessor.execute(request as RQ)
+                        val response = requestProcessor.execute(request as RQ, jwtInfo, encodedJwt as String)
                         val respMsg  = encoder.encode(response, requestProcessor.responseRef)
                         val end = System.currentTimeMillis
                         LOGGER.info("Processed request {} for tenant {} in {} ms with result code {}, response length is {}",

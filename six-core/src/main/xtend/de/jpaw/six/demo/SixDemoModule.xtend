@@ -3,13 +3,13 @@ package de.jpaw.six.demo
 import de.jpaw.bonaparte.core.BonaPortable
 import de.jpaw.bonaparte.core.BonaparteJsonEscaper
 import de.jpaw.bonaparte.core.StaticMeta
+import de.jpaw.bonaparte.pojos.api.auth.JwtInfo
 import de.jpaw.dp.Dependent
 import de.jpaw.dp.Fallback
 import de.jpaw.dp.Named
 import de.jpaw.dp.Singleton
 import de.jpaw.six.IRequestProcessor
 import de.jpaw.six.IServiceModule
-import de.jpaw.util.ApplicationException
 import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
 import java.util.Currency
@@ -56,9 +56,9 @@ class SixDemoModule implements IServiceModule {
 class SixDemoProcessor implements IRequestProcessor<BonaPortable, BonaPortable> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SixDemoProcessor)
     
-    override execute(BonaPortable rq) throws ApplicationException {
+    override execute(BonaPortable rq, JwtInfo info, String encodedJwt) {
         LOGGER.info('''Processing request «rq»''')
-        return rq
+        return rq  // demo: simple ECHO
     }
     
     override getRequestRef() {
@@ -71,5 +71,9 @@ class SixDemoProcessor implements IRequestProcessor<BonaPortable, BonaPortable> 
     
     override getReturnCode(BonaPortable rs) {
         return 0
+    }
+    
+    override getErrorDetails(BonaPortable rs) {
+        return null;
     }
 }
